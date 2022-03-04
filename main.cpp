@@ -29,7 +29,10 @@ int main() {
 	// Read the C file line by line
 	while (getline(cfile, line)) {
 		if (HelperFunc::isFuncHeaderInLine(line)) {  // Process the Function Header Line -------------------------------------------------------------------
-			// Get the return type
+			// reset the offset to -4 at the top of each function 
+			offset = -4;
+
+		    // Get the return type
 			retTypes.push_back(line.substr(0, line.find(" ")));
 			line=line.substr(line.find(" ") + 1);
 
@@ -65,7 +68,48 @@ int main() {
 			
 
 			if (line.find("[") != -1 && line.find("]") != -1) {  // Array Declartion
+				//get the name of array 1st and then its length
+				std::string arrayName = line.substr(0, line.find("["));
+				line = line.substr(line.find("[")+1);
+				short lenOfArr = std::stoi(line.substr(0, line.find("]")));
 				
+				// Now process the values of the array and add them to data structure that stores offsets and values one by one
+				line = line.substr(line.find("{") + 1);
+				line = line.substr(0, line.find("}")); // remove the }; from end of line
+				std::vector<std::string> arrValues;
+				HelperFunc::breakString(line,',',arrValues);
+
+				for (short i = 0; i < lenOfArr; i++) {
+					// 1st element of the array
+					if (i == 0) { 
+						std::pair firstArrElement(arrayName,offset);
+						
+						localVars.push_back(std::move(firstArrElement));
+						std::pair firstElement(arrayName,std::stoi(arrValues[i]));
+						varsNValues.push_back(std::move(firstElement));
+
+						// Updating output and adding the assembly instructions for array declartion
+						std::string outline = "   movl $" +arrValues[i];
+						outline = outline + ", "+std::to_string(offset);
+						outline = outline + "(%rbp)";
+						output.push_back(std::move(outline));
+						offset = offset - 4;
+					}
+					else { // other elements of arrray  
+						std::pair firstArrElement(arrayName+std::to_string(i), offset);
+						localVars.push_back(std::move(firstArrElement));
+						std::pair firstElement(arrayName+std::to_string(i), std::stoi(arrValues[i]));
+						varsNValues.push_back(std::move(firstElement));
+
+						// Updating output and adding the assembly instructions for array declartion 
+						std::string outline = "   movl $" +arrValues[i];
+						outline = outline + ", " + std::to_string(offset);
+						outline = outline + "(%rbp)";
+						output.push_back(std::move(outline));
+						offset = offset - 4;
+					}
+				}
+
 			}
 			else { // Variable Declartion with its variable 
 				std::vector<std::string> varDeclartions;
@@ -78,11 +122,17 @@ int main() {
 					// Now store the variable name and its offset and its value into the vector of pairs 
 					std::pair varoff(varName,offset);
 					localVars.push_back(std::move(varoff));
-					offset = offset - 4;
 
 					std::pair varVal(varName, varValue);
 					varsNValues.push_back(std::move(varVal));
-					
+
+					// Add assembly instruction by updating output for varibale declaration statement 
+					std::string outline = "   movl $" +std::to_string(varValue);
+					outline = outline + ", " + std::to_string(offset);
+					outline = outline + "(%rbp)";
+					output.push_back(std::move(outline));
+
+					offset = offset - 4;
 				}
 			}
 		}

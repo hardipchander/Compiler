@@ -26,6 +26,15 @@ namespace HelperFunc {
 		}
 	}
 
+	// displays the local variables and their values stored which are stored in the vector of pairs 
+	void displayVarNValues(std::vector<std::pair<std::string, int>>& vars) {
+		for (std::pair<std::string, int>& element : vars) {
+			std::cout << element.first << "   ";
+			std::cout << element.second << std::endl;
+		}
+	}
+
+
 	// finds the offset of a local variable based on looking into a vector of pairs
 	short getOffset(std::vector<std::pair<std::string, short>>& vars, std::string& variableName) {
 		for (std::pair<std::string, short> &element : vars) {

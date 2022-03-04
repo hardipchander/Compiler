@@ -17,6 +17,9 @@ namespace HelperFunc {
 	// It is used for debugging purposes 
 	void display(std::vector<std::pair<std::string, short> > & vars);
 
+	// displays the local variables and their values stored which are stored in the vector of pairs 
+	void displayVarNValues(std::vector<std::pair<std::string, int> >& vars);
+
 	// finds the offset of a local variable based on looking into a vector of pairs
 	short getOffset(std::vector<std::pair<std::string, short> >& vars, std::string& variableName);
 
