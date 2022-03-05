@@ -2,6 +2,7 @@
 
 #include "Action.h"
 
+// namespace below has all the helper function definitions
 namespace HelperFunc { 
 
 	// returns true or false on whether the current input line is a function header

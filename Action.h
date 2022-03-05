@@ -4,6 +4,7 @@
 // Make a macro for printing out things it is used for Debugging Purposes 
 #define PRINT(x) std::cout<<x<<std::endl;
 
+// namespace below has all the helper functions that I need 
 namespace HelperFunc {
 
 	// returns true or false on whether the current input line is a function header

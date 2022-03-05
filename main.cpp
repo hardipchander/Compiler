@@ -29,6 +29,10 @@ int main() {
 	// Read the C file line by line
 	while (getline(cfile, line)) {
 		if (HelperFunc::isFuncHeaderInLine(line)) {  // Process the Function Header Line -------------------------------------------------------------------
+			// print a space line between functions 
+			if (offset != -4) {
+				output.push_back(" ");
+			}
 			// reset the offset to -4 at the top of each function 
 			offset = -4;
 
@@ -137,8 +141,15 @@ int main() {
 			}
 		}
 		else if (line.find("return")!=-1) {               // Process the Return statement and the end of the function ---------------------------------------------
+			// Helper function that processes the return statement 
 			HelperFunc::handleReturnStatement(output,line,localVars);
-
+			if (functionNames[functionNames.size() - 1] == "main" && (functionNames.size()>1)) {
+				output.push_back("   leave");
+			}
+			else {
+				output.push_back("   popq %rbp");
+			}
+			output.push_back("   ret");
 		}
 		
 		
