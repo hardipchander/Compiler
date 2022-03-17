@@ -27,6 +27,12 @@ namespace HelperFunc {
 	// finds the value of a local variable based on looking into a vector of pairs
 	int getValue(std::vector<std::pair<std::string, int> >& vars, std::string &variableName);
 
+	// Returns what operator is in the line
+	std::string whatOperator(std::string& operationLine);
+
+	// Handle simple arithmetic operations +,-,*,/
+	void HandleSimpleArithmetic(std::vector<std::string>& answervector, std::string& operationstatement, std::vector<std::pair<std::string, short>>& localVarsOffsets);
+
 	// Function that handles the return statement it updates the output and looks for the offset of the returned value 
 	void handleReturnStatement(std::vector<std::string>& answer, std::string &returnStatement, std::vector<std::pair<std::string, short>> & localVarsOffsets);
 }

@@ -65,9 +65,9 @@ int main() {
 
 			}
 		}
-		else if (line.find("int")!=-1 && line.find("for") == -1 && line.find("while") == -1) {  // Process Variable declaration --------------------------------
+		else if (line.find("int")!=-1 && line.find("for") == -1) {  // Process Variable declaration --------------------------------
 			//parse variable declartion line 
-			line = line.substr(line.find(" ") + 1);
+			line = line.substr(line.find(" ") + 1); // jump to after int
 			line = line.substr(0, line.find(";")); // remove the ; from the line 
 			
 
@@ -86,13 +86,13 @@ int main() {
 				for (short i = 0; i < lenOfArr; i++) {
 					// 1st element of the array
 					if (i == 0) { 
-						std::pair firstArrElement(arrayName,offset);
+						std::pair firstArrElement(arrayName + " " + std::to_string(i),offset);
 						
 						localVars.push_back(std::move(firstArrElement));
-						std::pair firstElement(arrayName,std::stoi(arrValues[i]));
+						std::pair firstElement(arrayName + " " + std::to_string(i),std::stoi(arrValues[i]));
 						varsNValues.push_back(std::move(firstElement));
 
-						// Updating output and adding the assembly instructions for array declartion
+						// Updating output and adding the assembly instructions for each array element 
 						std::string outline = "   movl $" +arrValues[i];
 						outline = outline + ", "+std::to_string(offset);
 						outline = outline + "(%rbp)";
@@ -100,12 +100,12 @@ int main() {
 						offset = offset - 4;
 					}
 					else { // other elements of arrray  
-						std::pair firstArrElement(arrayName+std::to_string(i), offset);
+						std::pair firstArrElement(arrayName+" "+ std::to_string(i), offset);
 						localVars.push_back(std::move(firstArrElement));
-						std::pair firstElement(arrayName+std::to_string(i), std::stoi(arrValues[i]));
+						std::pair firstElement(arrayName+" "+ std::to_string(i), std::stoi(arrValues[i]));
 						varsNValues.push_back(std::move(firstElement));
 
-						// Updating output and adding the assembly instructions for array declartion 
+						// Updating output and adding the assembly instructions for each array element
 						std::string outline = "   movl $" +arrValues[i];
 						outline = outline + ", " + std::to_string(offset);
 						outline = outline + "(%rbp)";
@@ -139,6 +139,10 @@ int main() {
 					offset = offset - 4;
 				}
 			}
+		}  //Process Arithemtic statements simple -----------------------------------------------------------------------------------------------------------------
+		else if(line.find("int")==-1 && line.find("=") != -1 && (line.find("+") != -1 || line.find("-") != -1 || line.find("*") != -1) || line.find("/") != -1) {	
+			// Call helper function to handle Arithemtic statements 
+			HelperFunc::HandleSimpleArithmetic(output, line, localVars);
 		}
 		else if (line.find("return")!=-1) {               // Process the Return statement and the end of the function ---------------------------------------------
 			// Helper function that processes the return statement 
@@ -159,6 +163,8 @@ int main() {
 	for (std::string& outputline : output) {
 		PRINT(outputline);
 	}
+
+	
 
 	return 0;
 }
