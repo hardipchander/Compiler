@@ -6,16 +6,23 @@
 // Global Array String of Paramter Registers 
 const std::string paramReg[6] = {"%edi","%esi","%edx","%ecx","%r8d","%r9d"};
 
+// Short that will used to generate label names 
+short labelNumber = 1;
+
+// Bool that tells me if lines are in a for loop
+bool inForLoop = false;
+
 // Containers that store function information 
 std::vector<std::string> retTypes;
 std::vector<std::string> functionNames;
 
-// Vector of Pairs that represent the local varible names and their offsets 
+// Vector of Pairs that represent the local variable names and their offsets 
 std::vector<std::pair<std::string, short> > localVars;
 
 // Vector of Pairs that represent the local variable names and their values
 std::vector<std::pair<std::string, int> > varsNValues;
 
+// Offset for the all the local variables 
 short offset = -4;
 
 // The final answer that stores all the assembly instructions 
@@ -144,6 +151,30 @@ int main() {
 			// Call helper function to handle Arithemtic statements 
 			HelperFunc::HandleSimpleArithmetic(output, line, localVars);
 		}
+		else if (line.find("for")!=-1) {  //Process For Loop Statement --------------------------------------------------------------------------------------------
+			// Set Flag to true
+			inForLoop = true;
+
+			// remove ending ) { from line and remove for ( from line
+			line = line.substr(0, line.find(")")); 
+			line = line.substr(line.find("(") + 1); 
+			
+			// Break For loop into 3 parts and store the parts in loopParts
+			std::vector<std::string> loopParts;
+			HelperFunc::breakString(line, ';', loopParts);
+			HelperFunc::handleFirstPart(loopParts[0], output, localVars, offset);
+			output.push_back(".L" + std::to_string(labelNumber) + ":");  // add the begining label 
+
+		}
+		else if (line.find("}") != -1 && inForLoop == true) { // Process the end of the for loop ------------------------------------------------------------------
+			// Uncondtional Jump label 	
+			output.push_back("   jmp .L" + std::to_string(labelNumber) + ":");
+
+			// end label 
+			output.push_back(".L" + std::to_string(labelNumber) + "Exit:");
+			labelNumber++;
+			inForLoop = false;  // because I am the end of the for loop
+		}
 		else if (line.find("return")!=-1) {               // Process the Return statement and the end of the function ---------------------------------------------
 			// Helper function that processes the return statement 
 			HelperFunc::handleReturnStatement(output,line,localVars);
@@ -163,7 +194,7 @@ int main() {
 	for (std::string& outputline : output) {
 		PRINT(outputline);
 	}
-
+	
 	
 
 	return 0;

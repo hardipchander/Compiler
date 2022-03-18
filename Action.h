@@ -6,7 +6,6 @@
 
 // namespace below has all the helper functions that I need 
 namespace HelperFunc {
-
 	// returns true or false on whether the current input line is a function header
 	bool isFuncHeaderInLine(std::string& line);
 	
@@ -33,6 +32,14 @@ namespace HelperFunc {
 	// Handle simple arithmetic operations +,-,*,/
 	void HandleSimpleArithmetic(std::vector<std::string>& answervector, std::string& operationstatement, std::vector<std::pair<std::string, short>>& localVarsOffsets);
 
+	// Handle 1st part of For Loop
+	void handleFirstPart(std::string& part, std::vector<std::string>& answervector, std::vector<std::pair<std::string, short>>& localVarsOffsets, short&off);
+
+	// Handle 2nd part of For Loop
+
+	// Handle 3nd part of For Loop
+
 	// Function that handles the return statement it updates the output and looks for the offset of the returned value 
 	void handleReturnStatement(std::vector<std::string>& answer, std::string &returnStatement, std::vector<std::pair<std::string, short>> & localVarsOffsets);
 }
+

@@ -3,8 +3,7 @@
 #include "Action.h"
 
 // namespace below has all the helper function definitions
-namespace HelperFunc { 
-
+namespace HelperFunc {
 	// returns true or false on whether the current input line is a function header
 	bool HelperFunc::isFuncHeaderInLine(std::string& line) {
 		return ( (line.find("(") != -1) && (line.find(")") != -1) && (line.find("for") == -1) && (line.find(";") == -1)) ? true : false;
@@ -155,6 +154,19 @@ namespace HelperFunc {
 		}
 	}
 
+	// Handle 1st part of For Loop
+	void handleFirstPart(std::string& part, std::vector<std::string>& answervector, std::vector<std::pair<std::string, short>>& localVarsOffsets, short &off) {
+		// only if in nice form int x=0 might have to add to this function in the function 
+		answervector.push_back("   movl $"+part.substr(part.find("=")+1)+", "+std::to_string(off)+"(%rbp)");
+		//Add variable to the variable and offset data structure 
+		part = part.substr(part.find(" ") + 1);
+		part = part.substr(0, part.find("=")); // get the variable name
+		std::pair<std::string,short> loopvar(part,off);
+		localVarsOffsets.push_back(loopvar);
+		
+		// Don't forget to decrement the offset variable by 4
+		off = off - 4;
+	}
 
 	// Function that handles the return statement it updates the output and looks for the offset of the returned value 
 	void handleReturnStatement(std::vector<std::string>& answer, std::string& returnStatement, std::vector<std::pair<std::string, short>>& localVarsOffsets) {
