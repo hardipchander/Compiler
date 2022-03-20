@@ -168,6 +168,54 @@ namespace HelperFunc {
 		off = off - 4;
 	}
 
+	// Handle 2nd part of For Loop and adds first two lines of assembly code under the begining loop label  
+	void handleSecondPart(std::string& part, std::vector<std::string>& answervector, short& labelNum, short& off) {
+		// The real loop variable offset 
+		short offsetOfLoopVar = off + 4;
+
+		// Getting the opposite comparsion and adding 1st two lines of assembly code under the loop label
+		if (part.find("<=") != -1) {
+			answervector.push_back("   cmp $"+(part.substr(part.find("=")+1))+", "+std::to_string(offsetOfLoopVar)+"(%rbp)");
+			answervector.push_back("   jg .L" + std::to_string(labelNum) + "Exit:");
+		}
+		else if (part.find(">=") != -1) {
+			answervector.push_back("   cmp $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   jl .L" + std::to_string(labelNum) + "Exit:");
+		}
+		else if (part.find(">") != -1) {
+			answervector.push_back("   cmp $" + (part.substr(part.find(">") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   jle .L" + std::to_string(labelNum) + "Exit:");
+		}
+		else if (part.find("<") != -1) {
+			answervector.push_back("   cmp $" + (part.substr(part.find("<") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   jge .L" + std::to_string(labelNum) + "Exit:");
+		}
+		else if (part.find("==") != -1) {
+			answervector.push_back("   cmp $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   jne .L" + std::to_string(labelNum) + "Exit:");
+		}
+		else if (part.find("!=") != -1) {
+			answervector.push_back("   cmp $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   je .L" + std::to_string(labelNum) + "Exit:");
+		}
+	}
+
+	// Handle 3nd part of For Loop and adds the increment value that changes the value of the for loop variable 
+	void handleThirdPart(std::string& part, std::vector<std::string>& answervector, short& off) {
+		if (part.find("++") != -1) {
+			answervector.push_back("   addl $1, " + std::to_string(off) + "(%rbp)");
+		}
+		else if (part.find("--") != -1) {
+			answervector.push_back("   subl $1, " + std::to_string(off) + "(%rbp)");
+		}
+		else if (part.find("=") != -1 && part.find("+") != -1) {
+			answervector.push_back("   addl $"+(part.substr(part.find("+") + 1))+", "+ std::to_string(off) + "(%rbp)");
+		}
+		else if (part.find("=") != -1 && part.find("-") != -1) {
+			answervector.push_back("   subl $"+ (part.substr(part.find("-") + 1))+", "+ std::to_string(off) + "(%rbp)");
+		}
+	}
+
 	// Function that handles the return statement it updates the output and looks for the offset of the returned value 
 	void handleReturnStatement(std::vector<std::string>& answer, std::string& returnStatement, std::vector<std::pair<std::string, short>>& localVarsOffsets) {
 		// parse the return statement to get its return value

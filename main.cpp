@@ -12,6 +12,10 @@ short labelNumber = 1;
 // Bool that tells me if lines are in a for loop
 bool inForLoop = false;
 
+// Third part of the for loop statement and the oringinal offset of for loop variable 
+std::string thirdLoopPart;
+short originalOffset;
+
 // Containers that store function information 
 std::vector<std::string> retTypes;
 std::vector<std::string> functionNames;
@@ -162,11 +166,24 @@ int main() {
 			// Break For loop into 3 parts and store the parts in loopParts
 			std::vector<std::string> loopParts;
 			HelperFunc::breakString(line, ';', loopParts);
+
+			// Calling helper function to handle 1st part of for loop out of the three parts 
 			HelperFunc::handleFirstPart(loopParts[0], output, localVars, offset);
 			output.push_back(".L" + std::to_string(labelNumber) + ":");  // add the begining label 
 
+			// Calling helper function to handle 2nd part of for loop to add first two lines of assembly code under the begining loop label   
+			HelperFunc::handleSecondPart(loopParts[1], output, labelNumber, offset);
+			
+			// Store 3th loop part in global string variable and offset of for loop variable because I will need it later in different else chain 
+			thirdLoopPart = loopParts[2];
+			originalOffset = offset + 4;
+
+			// From here on the rest of the code will be for loop body !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
 		else if (line.find("}") != -1 && inForLoop == true) { // Process the end of the for loop ------------------------------------------------------------------
+			// Call helper function for the 3th part of foor loop and add assembly line that incrments the value of for loop variable  
+			HelperFunc::handleThirdPart(thirdLoopPart,output,originalOffset);
+
 			// Uncondtional Jump label 	
 			output.push_back("   jmp .L" + std::to_string(labelNumber) + ":");
 
@@ -174,6 +191,11 @@ int main() {
 			output.push_back(".L" + std::to_string(labelNumber) + "Exit:");
 			labelNumber++;
 			inForLoop = false;  // because I am the end of the for loop
+			
+			// reset global variables that keep track of the for loop
+			thirdLoopPart = "";
+			originalOffset = 0;
+
 		}
 		else if (line.find("return")!=-1) {               // Process the Return statement and the end of the function ---------------------------------------------
 			// Helper function that processes the return statement 
