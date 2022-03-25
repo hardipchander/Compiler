@@ -76,7 +76,7 @@ int main() {
 
 			}
 		}
-		else if (line.find("int")!=-1 && line.find("for") == -1) {  // Process Variable declaration --------------------------------
+		else if (line.find("int")!=-1 && line.find("for") == -1) {  // Process Variable declaration --------------------------------------------------------
 			//parse variable declartion line 
 			line = line.substr(line.find(" ") + 1); // jump to after int
 			line = line.substr(0, line.find(";")); // remove the ; from the line 
@@ -150,10 +150,51 @@ int main() {
 					offset = offset - 4;
 				}
 			}
-		}  //Process Arithemtic statements simple -----------------------------------------------------------------------------------------------------------------
+		}  //Process Arithemtic statements simple ( a=b(+/-/*//)c) -----------------------------------------------------------------------------------------------------------------
 		else if(line.find("int")==-1 && line.find("=") != -1 && (line.find("+") != -1 || line.find("-") != -1 || line.find("*") != -1) || line.find("/") != -1) {	
 			// Call helper function to handle Arithemtic statements 
-			HelperFunc::HandleSimpleArithmetic(output, line, localVars);
+			HelperFunc::HandleSimpleArithmetic(output, line, localVars, varsNValues);
+
+		} // Handle Variable Assigment ---------------------------------------------------------------------------------------------------------------------------
+		else if (line.find("int") == -1 && line.find("=") != -1 && (line.find("+") == -1 && line.find("-") == -1 && line.find("*") == -1) && line.find("/") == -1) {  
+			// (a=b)!!!!!! a can be variable or array element and the same with b
+			std::string partBeforeEqual = line.substr(0, line.find("=")); // get a=
+			std::string partAfterEqual = line.substr(line.find("=")+1);   // get b;
+			partAfterEqual = partAfterEqual.substr(0, partAfterEqual.find(";"));  // get b remove the ; from b;
+			
+			// offset of variable a and variable b
+			short offOfAVar;
+			short offOfBVar;
+
+			if (partBeforeEqual.find("[") != -1) { // a is an array element a[literal] !!!!!!! might have to come back here 
+				std::string realName= HelperFunc::convertArrName(partBeforeEqual); // the format I have array elements stored in data structure 
+				offOfAVar = HelperFunc::getOffset(localVars, realName);
+			}
+			else { // a is an regular variable 
+				offOfAVar = HelperFunc::getOffset(localVars, partBeforeEqual);
+			}
+
+			if (partAfterEqual.find("[") != -1) { // b is an array element b[literal] !!!!!!! might have to come back here 
+				std::string realNam = HelperFunc::convertArrName(partAfterEqual); // the format I have array elements stored in data structure 
+				offOfBVar = HelperFunc::getOffset(localVars, realNam);
+			}
+			else if (HelperFunc::getOffset(localVars, partAfterEqual)!=-1) { // b is an regular variable
+				offOfBVar = HelperFunc::getOffset(localVars, partAfterEqual);
+			}
+			else { // b is a literal
+				offOfBVar = 10; // this will tell me that in (a=b) that b is a literal
+			}
+
+
+			// Addind to the output 
+			if (offOfBVar == 10) { // in (a=b) that b is a literal
+				output.push_back("   movl $"+partAfterEqual+", "+std::to_string(offOfAVar)+"(%rbp)");
+			}
+			else {
+				output.push_back("   movl " + std::to_string(offOfBVar) + "(%rbp)" + ", %eax");
+				output.push_back("   movl %eax, "+std::to_string(offOfAVar) + "(%rbp)");
+			}
+
 		}
 		else if (line.find("for")!=-1) {  //Process For Loop Statement --------------------------------------------------------------------------------------------
 			// Set Flag to true
@@ -168,7 +209,7 @@ int main() {
 			HelperFunc::breakString(line, ';', loopParts);
 
 			// Calling helper function to handle 1st part of for loop out of the three parts 
-			HelperFunc::handleFirstPart(loopParts[0], output, localVars, offset);
+			HelperFunc::handleFirstPart(loopParts[0], output, localVars, offset, varsNValues);
 			output.push_back(".L" + std::to_string(labelNumber) + ":");  // add the begining label 
 
 			// Calling helper function to handle 2nd part of for loop to add first two lines of assembly code under the begining loop label   
@@ -181,7 +222,7 @@ int main() {
 			// From here on the rest of the code will be for loop body !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
 		else if (line.find("}") != -1 && inForLoop == true) { // Process the end of the for loop ------------------------------------------------------------------
-			// Call helper function for the 3th part of foor loop and add assembly line that incrments the value of for loop variable  
+			// Call helper function for the 3th part of foor loop and add assembly line that increments the value of for loop variable  
 			HelperFunc::handleThirdPart(thirdLoopPart,output,originalOffset);
 
 			// Uncondtional Jump label 	
@@ -213,11 +254,9 @@ int main() {
 	}
 
 	// Displaying the assembly code for the final answer 
-	for (std::string& outputline : output) {
-		PRINT(outputline);
+	for (std::string& line : output) {
+		PRINT(line);
 	}
-	
-	
 
 	return 0;
 }
