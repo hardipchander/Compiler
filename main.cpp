@@ -3,7 +3,7 @@
 #include "pch.h"
 #include "Action.h"
 
-// Global Array String of Paramter Registers 
+// Global Array String of Parameter Registers 
 const std::string paramReg[6] = {"%edi","%esi","%edx","%ecx","%r8d","%r9d"};
 
 // Short that will used to generate label names 
@@ -11,6 +11,12 @@ short labelNumber = 1;
 
 // Bool that tells me if lines are in a for loop
 bool inForLoop = false;
+
+// Bool that tells me if lines are in a if clause 
+bool inIfStatement = false;
+
+// Bool that tells me if lines are in a else clause
+bool inElseStatement = false;
 
 // Third part of the for loop statement and the oringinal offset of for loop variable 
 std::string thirdLoopPart;
@@ -39,6 +45,7 @@ int main() {
 
 	// Read the C file line by line
 	while (getline(cfile, line)) {
+
 		if (HelperFunc::isFuncHeaderInLine(line)) {  // Process the Function Header Line -------------------------------------------------------------------
 			// print a space line between functions 
 			if (offset != -4) {
@@ -59,6 +66,11 @@ int main() {
 			output.push_back("   pushq %rbp");
 			output.push_back("   movq %rsp, %rbp");
 			
+			// modifying rsp if main is not a leaf function 
+			if (functionNames[functionNames.size() - 1] == "main" && (functionNames.size() > 1)) {
+				output.push_back("   subq $32, %rsp");
+			}
+
 			// Get the function parameters if the function has 
 			if (line.find("int") != -1) {
 				// Call my Python Delimeter like function 
@@ -76,7 +88,7 @@ int main() {
 
 			}
 		}
-		else if (line.find("int")!=-1 && line.find("for") == -1) {  // Process Variable declaration --------------------------------------------------------
+		else if (line.find("int")!=-1 && line.find("for") == -1 && (line.find("else") == -1 && line.find("if") == -1)) {  // Process Variable declaration --------------------------------------------------------
 			//parse variable declartion line 
 			line = line.substr(line.find(" ") + 1); // jump to after int
 			line = line.substr(0, line.find(";")); // remove the ; from the line 
@@ -151,12 +163,12 @@ int main() {
 				}
 			}
 		}  //Process Arithemtic statements simple ( a=b(+/-/*//)c) -----------------------------------------------------------------------------------------------------------------
-		else if(line.find("int")==-1 && line.find("=") != -1 && (line.find("+") != -1 || line.find("-") != -1 || line.find("*") != -1) || line.find("/") != -1) {	
+		else if(line.find("int")==-1 && line.find("=") != -1 && (line.find("else") == -1 && line.find("if") == -1) &&(line.find("+") != -1 || line.find("-") != -1 || line.find("*") != -1) || line.find("/") != -1) {
 			// Call helper function to handle Arithemtic statements 
 			HelperFunc::HandleSimpleArithmetic(output, line, localVars, varsNValues);
 
 		} // Handle Variable Assigment ---------------------------------------------------------------------------------------------------------------------------
-		else if (line.find("int") == -1 && line.find("=") != -1 && (line.find("+") == -1 && line.find("-") == -1 && line.find("*") == -1) && line.find("/") == -1) {  
+		else if (line.find("int") == -1 && line.find("=") != -1 && (line.find("+") == -1 && line.find("-") == -1 && line.find("*") == -1) && line.find("/") == -1 && (line.find("else") == -1 && line.find("if") == -1)) {
 			// (a=b)!!!!!! a can be variable or array element and the same with b
 			std::string partBeforeEqual = line.substr(0, line.find("=")); // get a=
 			std::string partAfterEqual = line.substr(line.find("=")+1);   // get b;
@@ -196,7 +208,105 @@ int main() {
 			}
 
 		}
-		else if (line.find("for")!=-1) {  //Process For Loop Statement --------------------------------------------------------------------------------------------
+		else if (line.find("if")!=-1) {  //Process if statments or if-else statements ----------------------------------------------------------------------------------------------
+			inIfStatement = true; // set the flag to true 
+
+			line = line.substr(line.find("(") + 1); // remove if( ) {
+			line = line.substr(0, line.find(")"));  // get a<b
+			std::string inverseLogic; // store the opposite conditional jump like > - jle 
+			std::string comparsion; // store the comparsion operator itself 
+
+			// Handling the comparsion  might have to come here again for check !!!!!!!!!!!!!!!!!!!!!
+			if (line.find("<=") != -1) {
+				inverseLogic = "   jg ";
+				comparsion = "<=";
+			}
+			else if (line.find(">=") != -1) {
+				inverseLogic = "   jl ";
+				comparsion = ">=";
+			}
+			else if (line.find(">") != -1) {
+				inverseLogic = "   jle ";
+				comparsion = ">";
+			}
+			else if (line.find("<") != -1) {
+				inverseLogic = "   jge ";
+				comparsion = "<";
+			}
+			else if (line.find("==") != -1) {
+				inverseLogic = "   jne ";
+				comparsion = "==";
+			}
+			else if (line.find("!=") != -1) {
+				inverseLogic = "   je ";
+				comparsion = "!=";
+			}
+
+			// time to get variables and their offsets
+			std::string a = line.substr(0, line.find(comparsion));
+			std::string b;
+			short offIfA;
+			short offIfB;
+
+			if (comparsion.length() > 1) {
+				b=line.substr(line.find(comparsion) + 2);
+			}
+			else {
+				b=line.substr(line.find(comparsion)+1);
+			}
+			
+			// have to check if a and b are array elements or literal or regular variables
+			if (a.find("[") != -1) { // a is an array element
+				std::string realNameofA = HelperFunc::convertArrName(a);
+				offIfA = HelperFunc::getOffset(localVars, realNameofA);
+			}
+			else {   // a is an regular variable 
+				offIfA = HelperFunc::getOffset(localVars, a);
+			}
+
+			if (b.find("[") != -1) { // b is an array element
+				std::string realNameofB = HelperFunc::convertArrName(b);
+				offIfB = HelperFunc::getOffset(localVars, realNameofB);
+			}
+			else if(HelperFunc::getOffset(localVars, b)==-1) {   // b is a literal 
+				offIfB=-10; //signal that b is a literal
+			}
+			else { // b is a regular variable  
+				offIfB = HelperFunc::getOffset(localVars, b);
+			}
+
+			// add to output
+			output.push_back("   movl "+std::to_string(offIfA)+"(%rbp), %ebx");
+			if (offIfB == -10) { //  b is a literal
+				output.push_back("   cmpl $" +b+ ", %ebx");
+			}
+			else { //  b is a regular variable or array element 
+				output.push_back("   cmpl " +std::to_string(offIfB)+ "(%rbp), %ebx");
+			}
+
+			// Add inverse logic jg, jne or other and the label 
+			output.push_back((std::move(inverseLogic))+"L"+std::to_string(labelNumber)+":");
+
+			// Now from here on out if body instructions 
+		}
+		else if (inIfStatement==true && line.find("}")!=-1 && line.find("else") != -1) { // then  a if-else structure ---------------------
+			inElseStatement = true;
+			output.push_back("   jmp  L" + std::to_string(labelNumber) + "Exit:"); // adding the labels 
+			output.push_back("L" + std::to_string(labelNumber) + ":");  // adding the labels 
+			inIfStatement = false; // set flag to false 
+
+		}
+		else if (inElseStatement==true && inIfStatement==false && line.find("}") != -1) { // at the end of the else clause 
+			output.push_back("L"+std::to_string(labelNumber) + "Exit:");
+			inElseStatement = false; // set flag to false
+			labelNumber++; // increment at the end of else clause so can generate new labels for the future 
+		}
+		else if (inIfStatement == true && line.find("}") != -1) { // only a if structure --------------------------------------------------
+			output.push_back("L" + std::to_string(labelNumber) + ":");
+			inIfStatement = false; // set flag to false since the statement is over 
+			labelNumber++;   // increment the label number to generate new label in the future 
+		}
+		else if (line.find("for")!=-1 && (line.find("else") == -1 && line.find("if") == -1) ) {  //Process For Loop Statement --------------------------------------------------------------------------------------------
 			// Set Flag to true
 			inForLoop = true;
 

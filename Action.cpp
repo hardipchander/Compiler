@@ -6,7 +6,7 @@
 namespace HelperFunc {
 	// returns true or false on whether the current input line is a function header
 	bool HelperFunc::isFuncHeaderInLine(std::string& line) {
-		return ( (line.find("(") != -1) && (line.find(")") != -1) && (line.find("for") == -1) && (line.find(";") == -1)) ? true : false;
+		return ( (line.find("(") != -1) && (line.find(")") != -1 ) && line.find("else") == -1 && (line.find("if") == -1 &&  line.find("for") == -1) && (line.find(";") == -1)) ? true : false;
 	}
 
 	// Breaks the string based on the breaker char and stores the pieces into storage 
@@ -300,27 +300,27 @@ namespace HelperFunc {
 
 		// Getting the opposite comparsion and adding 1st two lines of assembly code under the loop label
 		if (part.find("<=") != -1) {
-			answervector.push_back("   cmp $"+(part.substr(part.find("=")+1))+", "+std::to_string(offsetOfLoopVar)+"(%rbp)");
+			answervector.push_back("   cmpl $"+(part.substr(part.find("=")+1))+", "+std::to_string(offsetOfLoopVar)+"(%rbp)");
 			answervector.push_back("   jg .L" + std::to_string(labelNum) + "Exit:");
 		}
 		else if (part.find(">=") != -1) {
-			answervector.push_back("   cmp $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   cmpl $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
 			answervector.push_back("   jl .L" + std::to_string(labelNum) + "Exit:");
 		}
 		else if (part.find(">") != -1) {
-			answervector.push_back("   cmp $" + (part.substr(part.find(">") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   cmpl $" + (part.substr(part.find(">") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
 			answervector.push_back("   jle .L" + std::to_string(labelNum) + "Exit:");
 		}
 		else if (part.find("<") != -1) {
-			answervector.push_back("   cmp $" + (part.substr(part.find("<") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   cmpl $" + (part.substr(part.find("<") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
 			answervector.push_back("   jge .L" + std::to_string(labelNum) + "Exit:");
 		}
 		else if (part.find("==") != -1) {
-			answervector.push_back("   cmp $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   cmpl $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
 			answervector.push_back("   jne .L" + std::to_string(labelNum) + "Exit:");
 		}
 		else if (part.find("!=") != -1) {
-			answervector.push_back("   cmp $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
+			answervector.push_back("   cmpl $" + (part.substr(part.find("=") + 1)) + ", " + std::to_string(offsetOfLoopVar) + "(%rbp)");
 			answervector.push_back("   je .L" + std::to_string(labelNum) + "Exit:");
 		}
 	}
