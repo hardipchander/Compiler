@@ -45,6 +45,15 @@ int main() {
 
 	// Read the C file line by line
 	while (getline(cfile, line)) {
+		// Changing x++; and x--; statements for later code to handle them 
+		if (line.find("++;")!=-1) {
+			// change x++; to x=x+1;
+			line = (line.substr(0, line.find("++;"))) + "=" + (line.substr(0, line.find("++;"))) + "+1;";
+		}
+		else if (line.find("--;")!=-1) {
+			// change x--; to x=x-1;
+			line = (line.substr(0, line.find("--;"))) + "=" + (line.substr(0, line.find("--;"))) + "-1;";
+		}
 
 		if (HelperFunc::isFuncHeaderInLine(line)) {  // Process the Function Header Line -------------------------------------------------------------------
 			// print a space line between functions 
