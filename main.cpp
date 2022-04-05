@@ -152,6 +152,7 @@ int main() {
 
 			// Break parameters into a vector
 			std::vector<std::string> parameters;
+			std::vector<std::string> parameters7thandMore;
 			HelperFunc::breakString(line, ',', parameters);
 			
 			// Examinning each parameter in the function call one by one 
@@ -170,7 +171,25 @@ int main() {
 
 				}
 				else { // the 7th and beyond parameters 
+					// store them in a different vector for reverse order  
+					parameters7thandMore.push_back(std::move(param));
+				}
+			}
+			// Handling 7th and more parameters in the separate vector parameters7thandMore in reverse order
+			for (int y = parameters7thandMore.size() - 1; y >= 0; y--) {
+				std::string param7or8or9 = parameters7thandMore[y];
 
+				// check if parameter is an array first 
+				std::string Arrparameter = param7or8or9 + " 0";
+				if (HelperFunc::getOffset(localVars, Arrparameter) != -1) { // then array parameter 
+					// Use 64 bit register %rbx to store the base address of the array and then push onto stack the value of rbx 
+					output.push_back("   leaq "+ std::to_string(HelperFunc::getOffset(localVars, Arrparameter))+"(%rbp), %rbx");
+					output.push_back("   pushq %rbx");
+				}
+				else { // normal integer variable parameter
+					// Use 32 bit register %r10d to store parameter value and then push it onto the stack 
+					output.push_back("   pushq $" + std::to_string(HelperFunc::getValue(varsNValues,param7or8or9)));
+					
 				}
 			}
 
