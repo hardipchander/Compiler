@@ -4,15 +4,28 @@
 
 // namespace below has all the helper function definitions
 namespace HelperFunc {
-	// returns true or false on whether the current input line is a function header
+	// Returns true or false on whether the current input line is a function header
 	bool HelperFunc::isFuncHeaderInLine(std::string& line) {
 		return ( (line.find("(") != -1) && (line.find(")") != -1 ) && line.find("else") == -1 && (line.find("if") == -1 &&  line.find("for") == -1) && (line.find(";") == -1)) ? true : false;
+	}
+
+	// Returns true or false in whether the current input line is a function call 
+	bool isFunctionCall(std::string& line, std::vector<std::string>& namesOfFunctions) {
+		bool output = false;
+		for (std::string& name : namesOfFunctions) {
+			if (line.find(name)!=-1) {
+				output = true;
+			}
+		}
+		return output;
 	}
 
 	// Breaks the string based on the breaker char and stores the pieces into storage 
 	void breakString(std::string& line, char breaker, std::vector<std::string>& storage) {
 		std::stringstream list(line);
 		std::string out;
+
+		// Add to the storage vector one by one
 		while (std::getline(list, out, breaker)) {
 			storage.push_back(out);
 		}

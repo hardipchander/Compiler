@@ -5,6 +5,7 @@
 
 // Global Array String of Parameter Registers 
 const std::string paramReg[6] = {"%edi","%esi","%edx","%ecx","%r8d","%r9d"};
+const std::string paramRegEightBytes[6] = {"%rdi","%rsi","%rdx","%rcx","%r8","%r9"};
 
 // Short that will used to generate label names 
 short labelNumber = 1;
@@ -34,6 +35,7 @@ std::vector<std::pair<std::string, int> > varsNValues;
 
 // Offset for the all the local variables 
 short offset = -4;
+short offsetForParameter7th = 16;
 
 // The final answer that stores all the assembly instructions 
 std::vector<std::string> output;
@@ -63,6 +65,9 @@ int main() {
 			// reset the offset to -4 at the top of each function 
 			offset = -4;
 
+			// Reset the special offset for the 7th, 8th .... parameters 
+			offsetForParameter7th = 16;
+
 		    // Get the return type
 			retTypes.push_back(line.substr(0, line.find(" ")));
 			line=line.substr(line.find(" ") + 1);
@@ -82,20 +87,107 @@ int main() {
 
 			// Get the function parameters if the function has 
 			if (line.find("int") != -1) {
-				// Call my Python Delimeter like function 
-				std::vector<std::string> parmetersNames;
-				HelperFunc::breakString(line, ',', parmetersNames);
+				// Call the Python Delimeter like function 
+				std::vector<std::string> parametersNames;
+				HelperFunc::breakString(line, ',', parametersNames);
 
 				// Get the actual parameter variable names and store them in localVars 
-				for (std::string& paramter : parmetersNames) {
-					paramter = paramter.substr(paramter.find(" ") + 1);
-					std::pair<std::string, short> var(paramter,offset);
-					localVars.push_back(std::move(var));
-					output.push_back("   movl " + paramReg[(offset / -4) - 1]+", "+std::to_string(offset) + "(%rbp)");
-					offset = offset - 4;
-				}
+				for (int j = 0; j < parametersNames.size(); j++) {
+					std::string parameter = parametersNames[j];
+					parameter = parameter.substr(parameter.find(" ") + 1);
 
+					// For the first six parameters of the function 
+					if (j < 6) { 
+						if (parameter.find("[") == -1) { // regular int parameter 
+							std::pair<std::string, short> var(parameter, offset);
+							localVars.push_back(std::move(var));
+							output.push_back("   movl " + paramReg[j] + ", " + std::to_string(offset) + "(%rbp)");
+							offset = offset - 4;
+						}
+						else { // parameter is an array 
+							offset = offset - 4; // create larger space for array parameter 
+							std::pair<std::string, short> var(parameter, offset);
+							localVars.push_back(std::move(var));
+
+							// Array Base address is stored 
+							output.push_back("   movl " + paramRegEightBytes[j] + ", " + std::to_string(offset) + "(%rbp)");
+							offset = offset - 4;
+						}
+
+					}
+					else {  // for the rest of the parameters 7th and beyond  
+						if (parameter.find("[") == -1) { // regular int parameter
+							std::pair<std::string, short> var(parameter, offsetForParameter7th);
+							localVars.push_back(std::move(var));
+							offsetForParameter7th = offsetForParameter7th + 8; // above rbp 
+						}
+						else { // parameter is an array 
+							// Put the Base Address of Array above rbp when it is 7th parameter or the 8th parameter ....
+							std::pair<std::string, short> var(parameter, offsetForParameter7th);
+							localVars.push_back(std::move(var));
+							offsetForParameter7th = offsetForParameter7th + 8; // above rbp 
+						}
+					}
+				
+				} 
+				
 			}
+		}
+		else if (HelperFunc::isFunctionCall(line,functionNames)==true) {    //Process Function Call in main function ---------------------------------------------------------------------------------------
+			// Determine whether the function has a return type and Getting the function name
+			std::string funcName;
+			std::string variableModifiedByFunction = "-1";  // -1 meaning that the function does not have a return type 
+			if (line.find("=") != -1) { // function call has a return type
+				funcName = line.substr(line.find("=") + 1);
+				funcName = funcName.substr(0, funcName.find("("));
+				variableModifiedByFunction = line.substr(0, line.find("="));
+			}
+			else { // No return type so function call is just FunctionName(a,b,c);
+				funcName = line.substr(0, line.find("("));
+			}
+
+			// Handle the Parameters Now 
+			line = line.substr(line.find("(") + 1);
+			line = line.substr(0, line.find(")")); // remove the ( ); parts 
+
+			// Break parameters into a vector
+			std::vector<std::string> parameters;
+			HelperFunc::breakString(line, ',', parameters);
+			
+			// Examinning each parameter in the function call one by one 
+			for (int u = 0; u < parameters.size(); u++) {
+				std::string param = parameters[u];
+
+				if (u < 6) { // the first six parameters 
+					// check if parameter is an array first 
+					std::string Arrparam = param + " 0";
+					if (HelperFunc::getOffset(localVars, Arrparam) != -1) { // then array parameter 
+						output.push_back("   leaq "+std::to_string(HelperFunc::getOffset(localVars, Arrparam))+ "(rbp), "+paramRegEightBytes[u]);
+					}
+					else { // normal integer variable parameter
+						output.push_back("   movl " + std::to_string(HelperFunc::getOffset(localVars, param)) + "(%rbp), " + paramReg[u]);
+					}
+
+				}
+				else { // the 7th and beyond parameters 
+
+				}
+			}
+
+			// Calling function in Assembly 
+			output.push_back("   call "+funcName);
+
+			// addq after the function call 
+			if (parameters.size() > 6) {
+				short addqOffset = (parameters.size() - 6)*8;
+				output.push_back("   addq $"+std::to_string(addqOffset)+", %rsp");
+			}
+
+			// storing %eax into variableModifiedByFunction the return type
+			if (variableModifiedByFunction!="-1") { // function has a return type 
+				output.push_back("   movl %eax, " + std::to_string(HelperFunc::getOffset(localVars,variableModifiedByFunction)) + "(%rbp)");
+			}
+
 		}
 		else if (line.find("int")!=-1 && line.find("for") == -1 && (line.find("else") == -1 && line.find("if") == -1)) {  // Process Variable declaration --------------------------------------------------------
 			//parse variable declartion line 

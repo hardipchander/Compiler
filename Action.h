@@ -6,9 +6,12 @@
 
 // namespace below has all the helper functions that I need 
 namespace HelperFunc {
-	// returns true or false on whether the current input line is a function header
+	// Returns true or false on whether the current input line is a function header
 	bool isFuncHeaderInLine(std::string& line);
 	
+	// Returns true or false in whether the current input line is a function call 
+	bool isFunctionCall(std::string& line, std::vector<std::string>& namesOfFunctions);
+
 	// Breaks the string based on the breaker char and stores the pieces into storage 
 	// It acts like the python Delimeter function VERY IMPORTANT FUNCTION !!!!!!!!!!!!!!!!
 	void breakString(std::string& line, const char breaker, std::vector<std::string>& storage);
@@ -46,7 +49,6 @@ namespace HelperFunc {
 
 	// Handle 3nd part of For Loop and adds the increment value that changes the value of the for loop variable 
 	void handleThirdPart(std::string& part, std::vector<std::string>& answervector,short& off);
-
 
 	// Function that handles the return statement it updates the output and looks for the offset of the returned value 
 	void handleReturnStatement(std::vector<std::string>& answer, std::string &returnStatement, std::vector<std::pair<std::string, short>> & localVarsOffsets);
