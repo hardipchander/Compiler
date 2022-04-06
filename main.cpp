@@ -3,7 +3,7 @@
 #include "pch.h"
 #include "Action.h"
 
-// Global Array String of Parameter Registers 
+// Global Arrays String of Parameter Registers 
 const std::string paramReg[6] = {"%edi","%esi","%edx","%ecx","%r8d","%r9d"};
 const std::string paramRegEightBytes[6] = {"%rdi","%rsi","%rdx","%rcx","%r8","%r9"};
 
@@ -37,10 +37,11 @@ std::vector<std::pair<std::string, int> > varsNValues;
 short offset = -4;
 short offsetForParameter7th = 16;
 
-// The final answer that stores all the assembly instructions 
+// The final answer that stores all the assembly instructions at the end of program I will print all the elements of output
 std::vector<std::string> output;
 
 int main() {
+	// in inputCfile string place the name of the c file in the format of (../cfile)
 	std::string inputCfile= "../test.c";
 	std::ifstream cfile(inputCfile);
 	std::string line;
@@ -176,7 +177,7 @@ int main() {
 				}
 			}
 			// Handling 7th and more parameters in the separate vector parameters7thandMore in reverse order
-			for (int y = parameters7thandMore.size() - 1; y >= 0; y--) {
+			for (int y = parameters7thandMore.size() - 1; y >= 0; y--) { // reverse order
 				std::string param7or8or9 = parameters7thandMore[y];
 
 				// check if parameter is an array first 
@@ -196,7 +197,7 @@ int main() {
 			// Calling function in Assembly 
 			output.push_back("   call "+funcName);
 
-			// addq after the function call 
+			// addq after the function call if the function has more than 6 parameters 
 			if (parameters.size() > 6) {
 				short addqOffset = (parameters.size() - 6)*8;
 				output.push_back("   addq $"+std::to_string(addqOffset)+", %rsp");
@@ -284,8 +285,52 @@ int main() {
 			}
 		}  //Process Arithemtic statements simple ( a=b(+/-/*//)c) -----------------------------------------------------------------------------------------------------------------
 		else if(line.find("int")==-1 && line.find("=") != -1 && (line.find("else") == -1 && line.find("if") == -1) &&(line.find("+") != -1 || line.find("-") != -1 || line.find("*") != -1) || line.find("/") != -1) {
+			// Check if b and c are array operands that have a variable inside brackets then I need to add conversion cltq instructions
+			std::string copyOfLine = line;
+			copyOfLine = copyOfLine.substr(copyOfLine.find("=") + 1); // get b (+/-/*//)c; form 
+			copyOfLine = copyOfLine.substr(0, copyOfLine.find(";"));  //  remove the ; 
+			
+			// Flags to tell me if converions instructions are neeeded for each operand 
+			bool operandBNeedConversion = false;
+			bool operandCNeedConversion = false;
+
+			// Getting b and c operands themselves 
+			std::string operatorOfLine = HelperFunc::whatOperator(copyOfLine); // getting +, -,*, /
+			std::string operandB = copyOfLine.substr(0, copyOfLine.find(operatorOfLine));
+			std::string operandC = copyOfLine.substr(copyOfLine.find(operatorOfLine)+1);
+
+			// Checking them for converison instructions
+			if (HelperFunc::isArrWithVariable(operandB, localVars) == true) { // Operand B is an array with variable inside the brackets
+				operandBNeedConversion = true;
+				// I am going to move value of operand B into 32 bit register %r13d
+				std::string arrName = operandB.substr(0, operandB.find("["));
+				arrName = arrName + " 0";
+				std::string insideBrackets = operandB.substr(operandB.find("[") + 1); 
+				insideBrackets = insideBrackets.substr(0, insideBrackets.find("]"));
+
+				// Conversion Instructions for Operand B
+				output.push_back("   movl "+std::to_string(HelperFunc::getOffset(localVars,insideBrackets))+"(%rbp), %eax");
+				output.push_back("   cltq");
+				output.push_back("   movl "+ std::to_string(HelperFunc::getOffset(localVars, arrName))+"(%rbp,%rax,4) %eax");
+				output.push_back("   movl %eax, %r13d");
+			}
+			if (HelperFunc::isArrWithVariable(operandC, localVars) == true) { // Operand C is an array with variable inside the brackets
+				operandCNeedConversion = true;
+				// I am going to move value of operand C into 32 bit register %r14d
+				std::string arrName = operandC.substr(0, operandC.find("["));
+				arrName = arrName + " 0";
+				std::string insideBrackets = operandC.substr(operandC.find("[") + 1);
+				insideBrackets = insideBrackets.substr(0, insideBrackets.find("]"));
+
+				// Conversion Instructions for Operand C
+				output.push_back("   movl " + std::to_string(HelperFunc::getOffset(localVars, insideBrackets)) + "(%rbp), %eax");
+				output.push_back("   cltq");
+				output.push_back("   movl " + std::to_string(HelperFunc::getOffset(localVars, arrName)) + "(%rbp,%rax,4) %eax");
+				output.push_back("   movl %eax, %r14d");
+			} 
+
 			// Call helper function to handle Arithemtic statements 
-			HelperFunc::HandleSimpleArithmetic(output, line, localVars, varsNValues);
+			HelperFunc::HandleSimpleArithmetic(output, line, localVars, varsNValues, operandBNeedConversion, operandCNeedConversion);
 
 		} // Handle Variable Assigment ---------------------------------------------------------------------------------------------------------------------------
 		else if (line.find("int") == -1 && line.find("=") != -1 && (line.find("+") == -1 && line.find("-") == -1 && line.find("*") == -1) && line.find("/") == -1 && (line.find("else") == -1 && line.find("if") == -1)) {
@@ -471,6 +516,8 @@ int main() {
 		else if (line.find("return")!=-1) {               // Process the Return statement and the end of the function ---------------------------------------------
 			// Helper function that processes the return statement 
 			HelperFunc::handleReturnStatement(output,line,localVars);
+
+			// Check if at the end of the main function 
 			if (functionNames[functionNames.size() - 1] == "main" && (functionNames.size()>1)) {
 				output.push_back("   leave");
 			}

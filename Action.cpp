@@ -31,7 +31,24 @@ namespace HelperFunc {
 		}
 	}
 
-	// displays the local variables and their offsets stored which are stored in the vector of pairs 
+	// Checks if operand is an array with an variable inside its brackets to see if conversion instructions are needed
+	bool isArrWithVariable(std::string& operand, std::vector<std::pair<std::string, short>>& localVariables) {
+		if (operand.find("[") != -1) {
+			std::string insideBrackets = operand.substr(operand.find("[") + 1);
+			insideBrackets = insideBrackets.substr(0, insideBrackets.find("]"));
+			if (HelperFunc::getOffset(localVariables, insideBrackets) != -1) { // inside the operand array brackets is a variable 
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		else {
+			return false;
+		}
+	}
+
+	// displays the local variables and their offsets stored which are stored in the vector of pairs used for Debugging Purposes 
 	void display(std::vector<std::pair<std::string, short>>& vars) {
 		for (std::pair<std::string, short> &element : vars) {
 			std::cout << element.first << "   ";
@@ -39,7 +56,7 @@ namespace HelperFunc {
 		}
 	}
 
-	// displays the local variables and their values stored which are stored in the vector of pairs 
+	// displays the local variables and their values stored which are stored in the vector of pairs used for Debugging Purposes 
 	void displayVarNValues(std::vector<std::pair<std::string, int>>& vars) {
 		for (std::pair<std::string, int>& element : vars) {
 			std::cout << element.first << "   ";
@@ -48,7 +65,7 @@ namespace HelperFunc {
 	}
 
 
-	// finds the offset of a local variable based on looking into a vector of pairs
+	// Finds the offset of a local variable based on looking into a vector of pairs
 	short getOffset(std::vector<std::pair<std::string, short>>& vars, std::string& variableName) {
 		short out = -1;
 		for (std::pair<std::string, short> &element : vars) {
@@ -61,7 +78,7 @@ namespace HelperFunc {
 		return out;
 	}
 
-	// finds the value of a local variable based on looking into a vector of pairs
+	// Finds the value of a local variable based on looking into a vector of pairs that stores the varibale name with its value
 	int getValue(std::vector<std::pair<std::string, int>>& vars, std::string& variableName) {
 		short out=-1;
 		for (std::pair<std::string, int> &element : vars) {
@@ -109,7 +126,7 @@ namespace HelperFunc {
 	}
 
 	// Handle simple arithmetic operations +,-,*,/
-	void HandleSimpleArithmetic(std::vector<std::string>& answervector, std::string& operationstatement, std::vector<std::pair<std::string, short>>& localVarsOffsets, std::vector<std::pair<std::string, int>>& VarValues) {
+	void HandleSimpleArithmetic(std::vector<std::string>& answervector, std::string& operationstatement, std::vector<std::pair<std::string, short>>& localVarsOffsets, std::vector<std::pair<std::string, int>>& VarValues, bool& operB, bool& operC) {
 		if (whatOperator(operationstatement)=="/") { //  the / operation 
 			std::string c3 = operationstatement.substr(0, operationstatement.find("="));
 			operationstatement = operationstatement.substr(0, operationstatement.find(";")); // remove the  ; from the end 
@@ -236,7 +253,10 @@ namespace HelperFunc {
 			int valC2;
 
 			// Line 1
-			if (offC1 == -1) { // then a literal
+			if (operB == true) { // then operand b or c1 is array with a variable inside its brackets
+				answervector.push_back("   movl %r13d, %eax");
+			}
+			else if (offC1 == -1) { // then a literal
 				answervector.push_back("   movl $"+c1+", %eax");
 				valC1 = std::stoi(c1);
 			}
@@ -247,7 +267,10 @@ namespace HelperFunc {
 
 			
 			// Line 2
-			if (offC2 == -1) { // then a literal
+			if (operC == true) { // then operand c or c2 is array with a variable inside its brackets
+				answervector.push_back(operate +"%r14d, %eax");
+			}
+			else if (offC2 == -1) { // then a literal
 				answervector.push_back(operate+"$"+operationstatement + ", %eax");
 				valC2 = std::stoi(operationstatement);
 			}
