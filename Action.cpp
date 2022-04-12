@@ -2,7 +2,7 @@
 
 #include "Action.h"
 
-// namespace below has all the helper function definitions
+// namespace below has all the helper function definitions 
 namespace HelperFunc {
 	// Returns true or false on whether the current input line is a function header
 	bool HelperFunc::isFuncHeaderInLine(std::string& line) {

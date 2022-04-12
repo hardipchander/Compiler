@@ -19,25 +19,25 @@ bool inIfStatement = false;
 // Bool that tells me if lines are in a else clause
 bool inElseStatement = false;
 
-// Third part of the for loop statement and the oringinal offset of for loop variable 
+// Third part of the for loop statement and the original offset of for loop variable 
 std::string thirdLoopPart;
 short originalOffset;
 
-// Containers that store function information 
+// Containers that store function information like the function names and their return types 
 std::vector<std::string> retTypes;
 std::vector<std::string> functionNames;
 
-// Vector of Pairs that represent the local variable names and their offsets 
+// Vector of Pairs that represent the local variable names and their offsets and each pair represents a variable with its name and offset
 std::vector<std::pair<std::string, short> > localVars;
 
-// Vector of Pairs that represent the local variable names and their values
+// Vector of Pairs that represent the local variable names and their values and each pair represents a variable with its name and value
 std::vector<std::pair<std::string, int> > varsNValues;
 
-// Offset for the all the local variables 
+// Offset for the all the local variables, these variables will be modified throughout the program as variables are created 
 short offset = -4;
 short offsetForParameter7th = 16;
 
-// The final answer that stores all the assembly instructions at the end of program I will print all the elements of output
+// The final answer that stores all the assembly instructions and at the end of program I will print all the elements of output
 std::vector<std::string> output;
 
 int main() {
@@ -500,7 +500,7 @@ int main() {
 			// Call helper function for the 3th part of foor loop and add assembly line that increments the value of for loop variable  
 			HelperFunc::handleThirdPart(thirdLoopPart,output,originalOffset);
 
-			// Uncondtional Jump label 	
+			// Unconditional Jump label 	
 			output.push_back("   jmp .L" + std::to_string(labelNumber) + ":");
 
 			// end label 
