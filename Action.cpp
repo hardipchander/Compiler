@@ -164,8 +164,8 @@ namespace HelperFunc {
 			}
 			//--------------------------------------------------------------
 			// real values for value in the variable and value data structure
-			int valC1;
-			int valC2;
+			int valC1=-1;
+			int valC2=-1;
 
 			// Line 1
 			if (offC1 == -1) { // then a literal
@@ -249,8 +249,8 @@ namespace HelperFunc {
 			}
 			//--------------------------------------------------------------
 			// real values for value in the variable and value data structure
-			int valC1;
-			int valC2;
+			int valC1=-1;
+			int valC2=-1;
 
 			// Line 1
 			if (operB == true) { // then operand b or c1 is array with a variable inside its brackets

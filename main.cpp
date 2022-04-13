@@ -16,6 +16,9 @@ bool inForLoop = false;
 // Bool that tells me if lines are in a if clause 
 bool inIfStatement = false;
 
+// Bool that tells me whether the main has a return statement at the end of it 
+bool mainHasReturnStatement=false;
+
 // Bool that tells me if lines are in a else clause
 bool inElseStatement = false;
 
@@ -42,7 +45,7 @@ std::vector<std::string> output;
 
 int main() {
 	// in inputCfile string place the name of the c file in the format of (../cfile)
-	std::string inputCfile= "../test.c";
+	std::string inputCfile= "../TestCase2.c";
 	std::ifstream cfile(inputCfile);
 	std::string line;
 
@@ -59,10 +62,11 @@ int main() {
 		}
 
 		if (HelperFunc::isFuncHeaderInLine(line)) {  // Process the Function Header Line -------------------------------------------------------------------
-			// print a space line between functions 
+			// print a space line between functions , used for display on terminal 
 			if (offset != -4) {
 				output.push_back(" ");
 			}
+			
 			// reset the offset to -4 at the top of each function 
 			offset = -4;
 
@@ -111,7 +115,7 @@ int main() {
 							localVars.push_back(std::move(var));
 
 							// Array Base address is stored 
-							output.push_back("   movl " + paramRegEightBytes[j] + ", " + std::to_string(offset) + "(%rbp)");
+							output.push_back("   movq " + paramRegEightBytes[j] + ", " + std::to_string(offset) + "(%rbp)");
 							offset = offset - 4;
 						}
 
@@ -199,7 +203,7 @@ int main() {
 
 			// addq after the function call if the function has more than 6 parameters 
 			if (parameters.size() > 6) {
-				short addqOffset = (parameters.size() - 6)*8;
+				int addqOffset = (parameters7thandMore.size())*8;
 				output.push_back("   addq $"+std::to_string(addqOffset)+", %rsp");
 			}
 
@@ -213,7 +217,6 @@ int main() {
 			//parse variable declartion line 
 			line = line.substr(line.find(" ") + 1); // jump to after int
 			line = line.substr(0, line.find(";")); // remove the ; from the line 
-			
 
 			if (line.find("[") != -1 && line.find("]") != -1) {  // Array Declartion
 				//get the name of array 1st and then its length
@@ -265,21 +268,40 @@ int main() {
 				for (std::string& variableDeclartion : varDeclartions) {
 					// Get variable name and its value 
 					std::string varName = variableDeclartion.substr(0, variableDeclartion.find("="));
-					int varValue = std::stoi(variableDeclartion.substr(variableDeclartion.find("=") + 1));
+					int varValue;
 
-					// Now store the variable name and its offset and its value into the vector of pairs 
-					std::pair varoff(varName,offset);
-					localVars.push_back(std::move(varoff));
+					//Need to check if the value after the equal sign is a int literal or a actual local variable !!!!!!!!!
+					std::string valueAfterEqualSign = variableDeclartion.substr(variableDeclartion.find("=") + 1);
+					if (HelperFunc::getOffset(localVars, valueAfterEqualSign)== -1) { // then the value after the equal sign is integer literal 
+						varValue = std::stoi(valueAfterEqualSign);
 
-					std::pair varVal(varName, varValue);
-					varsNValues.push_back(std::move(varVal));
+						// Now store the variable name and its offset and its value into the vector of pairs 
+						std::pair varoff(varName, offset);
+						localVars.push_back(std::move(varoff));
 
-					// Add assembly instruction by updating output for varibale declaration statement 
-					std::string outline = "   movl $" +std::to_string(varValue);
-					outline = outline + ", " + std::to_string(offset);
-					outline = outline + "(%rbp)";
-					output.push_back(std::move(outline));
+						std::pair varVal(varName, varValue);
+						varsNValues.push_back(std::move(varVal));
 
+						// Add assembly instruction by updating output for variable declaration statement 
+						std::string outline = "   movl $" + std::to_string(varValue);
+						outline = outline + ", " + std::to_string(offset);
+						outline = outline + "(%rbp)";
+						output.push_back(std::move(outline));
+					}
+					else { // then the value after the equal sign is a local variable 
+						// Now store the variable name and its offset into the vector of pairs 
+						std::pair varoff(varName, offset);
+						localVars.push_back(std::move(varoff));
+
+						// Add assembly instruction
+						short offOfVarAfterEqualSign = HelperFunc::getOffset(localVars, valueAfterEqualSign);
+						// store value of local variable after the equal sign into 32 bit register ebx
+						std::string firstLine = "   movl " +std::to_string(offOfVarAfterEqualSign)+ "(%rbp), %ebx";
+						output.push_back(firstLine);
+						output.push_back("   movl %ebx, "+ std::to_string(offset)+"(%rbp)");
+					}
+
+					// Update the offset for the next potential local variable 
 					offset = offset - 4;
 				}
 			}
@@ -514,6 +536,10 @@ int main() {
 
 		}
 		else if (line.find("return")!=-1) {               // Process the Return statement and the end of the function ---------------------------------------------
+			// Checking if the main has a return statement and if it does not then I have to manually add the stack deallocation assembly code 
+			if (functionNames[functionNames.size() - 1] == "main") {
+				mainHasReturnStatement = true;
+			}											  
 			// Helper function that processes the return statement 
 			HelperFunc::handleReturnStatement(output,line,localVars);
 
@@ -528,6 +554,18 @@ int main() {
 		}
 		
 		
+	}
+
+	// if the main does not have a return statement then I have to manually add the stack deallocation assembly code leave and popq 
+	if (mainHasReturnStatement == false) {
+		// Check if at the end of the main function 
+		if (functionNames[functionNames.size() - 1] == "main" && (functionNames.size() > 1)) {
+			output.push_back("   leave");
+		}
+		else {
+			output.push_back("   popq %rbp");
+		}
+		output.push_back("   ret");
 	}
 
 	// Displaying the assembly code for the final answer 
